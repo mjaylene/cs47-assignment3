@@ -5,7 +5,33 @@ import { Button} from "react-native-web";
 import Pressable from "react-native/Libraries/Components/Pressable/Pressable";
 import millisToMinutesAndSeconds from "./utils/millisToMinutesAndSeconds";
 import SongItem from "./app/components/SongItem";
+import 'react-native-gesture-handler';
+import { WebView } from "react-native-webview"
+import { NavigationContainer } from '@react-navigation/native';
+import { createStackNavigator } from '@react-navigation/stack';
+import DetailScreen from "./app/components/DetailScreen";
+import PreviewScreen from "./app/components/PreviewScreen";
 
+const Stack = createStackNavigator();
+
+function HomeScreen({ navigation }) {
+  const { token, tracks, getSpotifyAuth } = useSpotifyAuth();
+  let contentDisplayed = null
+
+  if (token) {
+    // render flatlist
+    contentDisplayed = <List trackList ={tracks} navigation={navigation}/>;
+  } else {
+    // render authentication button
+    contentDisplayed = <AuthButton authFunction={getSpotifyAuth}/>;
+  }
+
+  return (
+    <SafeAreaView style={styles.container}>
+      {contentDisplayed}
+    </SafeAreaView>
+  );
+}
 
 const AuthButton = ({authFunction}) => {
   return (
@@ -20,7 +46,7 @@ const AuthButton = ({authFunction}) => {
   );
 }
 
-const renderSongItem = ({ item, index }) => (
+const renderSongItem = ({ item, index}, navigation) => (
   <SongItem 
     artistName = {item.album.artists[0].name}
     albumName = {item.album.name}
@@ -28,10 +54,13 @@ const renderSongItem = ({ item, index }) => (
     duration = {millisToMinutesAndSeconds(item.duration_ms)}
     index = {index}
     songName = {item.name}
+    navigation = {navigation}
+    trackUri = {item.external_urls.spotify}
+    previewUrl = {item.preview_url}
     />
 );
 
-const List = ({trackList}) => {
+const List = ({trackList, navigation}) => {
   return (
     <View style={styles.container}>
     <View style={styles.titleRow}>
@@ -40,8 +69,8 @@ const List = ({trackList}) => {
       <Text style={styles.titleText}>My Top Tracks</Text>
     </View>
     <FlatList
-      data={trackList}
-      renderItem={renderSongItem}
+      data={trackList} 
+      renderItem={(params) => renderSongItem(params, navigation)}
       keyExtractor={(item, index) => index}
       />
   </View>
@@ -49,22 +78,14 @@ const List = ({trackList}) => {
 }
 
 export default function App() {
-  // Pass in true to useSpotifyAuth to use the album ID (in env.js) instead of top tracks
-  const { token, tracks, getSpotifyAuth } = useSpotifyAuth();
-  let contentDisplayed = null
-
-  if (token) {
-    // render flatlist
-    contentDisplayed = <List trackList ={tracks}/>;
-  } else {
-    // render authentication button
-    contentDisplayed = <AuthButton authFunction={getSpotifyAuth}/>;
-  }
-
-  return (
-    <SafeAreaView style={styles.container}>
-      {contentDisplayed}
-    </SafeAreaView>
+  return(
+    <NavigationContainer>
+      <Stack.Navigator>
+        <Stack.Screen name="Back " component={HomeScreen} options={{headerShown: false}}/>
+        <Stack.Screen name="Song details" component={DetailScreen} />
+        <Stack.Screen name="Song preview" component={PreviewScreen} />
+      </Stack.Navigator>
+    </NavigationContainer>
   );
 }
 
